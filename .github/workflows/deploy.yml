@@ -1,17 +1,35 @@
-name: Deploy to Server
+name: Deploy to Timeweb Server
 
 on:
   push:
     branches: [ main ]
 
+env:
+  DOCKERHUB_IMAGE_PREFIX: ${{ secrets.DOCKERHUB_USERNAME }}/velo
+  SSH_OPTS: -o StrictHostKeyChecking=no -o ConnectTimeout=10
+
 jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+      
+      - name: Setup environment
+        run: |
+          echo "DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}" >> $GITHUB_ENV
+          echo "SSH_HOST=${{ secrets.SSH_HOST }}" >> $GITHUB_ENV
+          echo "SSH_USER=${{ secrets.SSH_USER }}" >> $GITHUB_ENV
+      
+      - name: Debug info
+        run: |
+          echo "Docker Hub user: ${{ secrets.DOCKERHUB_USERNAME }}"
+          echo "Target server: ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}"
+          echo "Current directory: $(pwd)"
+          ls -la
       
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
@@ -27,7 +45,7 @@ jobs:
         with:
           context: ./backend
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/velo-backend:latest
+          tags: ${{ env.DOCKERHUB_IMAGE_PREFIX }}-backend:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
       
@@ -36,7 +54,7 @@ jobs:
         with:
           context: ./frontend
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/velo-frontend:latest
+          tags: ${{ env.DOCKERHUB_IMAGE_PREFIX }}-frontend:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
       
@@ -45,26 +63,65 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
       
-      - name: Copy files to server
+      - name: Test SSH connection
         run: |
-          # Create necessary directories
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
-            "mkdir -p /opt/velo/caddy"
-          
-          # Copy docker-compose and Caddy configuration
-          scp -o StrictHostKeyChecking=no \
+          echo "Testing SSH connection to ${{ secrets.SSH_HOST }}..."
+          ssh ${{ env.SSH_OPTS }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
+            "echo 'SSH connection successful!' || echo 'SSH connection failed'"
+      
+      - name: Prepare server directories
+        run: |
+          ssh ${{ env.SSH_OPTS }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
+            "mkdir -p /opt/velo/{caddy,config,db_backups}"
+      
+      - name: Upload configuration files
+        run: |
+          # Upload docker-compose
+          scp ${{ env.SSH_OPTS }} \
             docker-compose.prod.yml \
             ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/opt/velo/
-            
-          scp -o StrictHostKeyChecking=no \
-            caddy/Caddyfile \
-            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/opt/velo/caddy/
+          
+          # Upload Caddyfile if exists
+          if [ -f "caddy/Caddyfile" ]; then
+            scp ${{ env.SSH_OPTS }} \
+              caddy/Caddyfile \
+              ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/opt/velo/caddy/
+          fi
       
-      - name: Deploy to server
+      - name: Deploy application
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
+          ssh ${{ env.SSH_OPTS }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} /bin/bash << 'EOF'
+            set -e
+            cd /opt/velo
+            
+            echo "Logging in to Docker Hub..."
+            echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+            
+            echo "Pulling latest images..."
+            docker-compose -f docker-compose.prod.yml pull
+            
+            echo "Starting services..."
+            docker-compose -f docker-compose.prod.yml up -d --force-recreate
+            
+            echo "Cleaning up..."
+            docker system prune -f
+            
+            echo "Deployment completed successfully!"
+          EOF
+      
+      - name: Verify deployment
+        run: |
+          ssh ${{ env.SSH_OPTS }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
             "cd /opt/velo && \
-             echo ${{ secrets.DOCKERHUB_USERNAME }} | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin && \
-             docker-compose -f docker-compose.prod.yml pull && \
-             docker-compose -f docker-compose.prod.yml up -d --force-recreate && \
-             docker system prune -f"
+             docker-compose -f docker-compose.prod.yml ps && \
+             echo 'Containers are running:' && \
+             docker ps --format '{{.Names}}: {{.Status}}'"
+
+      - name: Notify on failure
+        if: failure()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_TITLE: "Deployment Failed"
+          SLACK_MESSAGE: "Deployment of $GITHUB_REPOSITORY failed on ${{ github.ref }}"
+          SLACK_COLOR: "danger"

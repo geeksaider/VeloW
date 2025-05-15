@@ -1,0 +1,269 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom color palette */
+:root {
+  --color-primary: #f4f1ee; /* Теплый кремовый */
+  --color-primary-hover: #e7e2dc;
+  --color-secondary: #d4c8be; /* Мягкий бежевый */
+  --color-accent: #8a7968; /* Земляной коричневый */
+  --color-dark: #3a3532; /* Глубокий коричневый */
+  --color-text: #2c2520;
+  --color-light-text: #68625c;
+  --color-bg: #fbf9f7;
+}
+
+@layer base {
+  body {
+    @apply bg-[color:var(--color-bg)] text-[color:var(--color-text)] font-serif;
+  }
+  h1 {
+    @apply text-4xl md:text-5xl font-light tracking-tight text-[color:var(--color-dark)] mb-6;
+  }
+  h2 {
+    @apply text-3xl md:text-4xl font-light tracking-tight text-[color:var(--color-dark)] mb-5;
+  }
+  h3 {
+    @apply text-2xl md:text-3xl font-light tracking-tight text-[color:var(--color-dark)] mb-4;
+  }
+  h4 {
+    @apply text-xl font-light text-[color:var(--color-dark)] mb-3;
+  }
+  p {
+    @apply leading-relaxed text-[color:var(--color-light-text)] mb-4;
+  }
+  a {
+    @apply transition-all duration-300;
+  }
+  img {
+    @apply transition-all duration-500;
+  }
+  input, textarea, select {
+    @apply focus:ring-[color:var(--color-secondary)] focus:border-[color:var(--color-secondary)];
+  }
+}
+
+@layer components {
+  /* Enhanced visual elements */
+  .velo-container {
+    @apply max-w-7xl mx-auto px-5 md:px-10 lg:px-16;
+  }
+  
+  .velo-section {
+    @apply py-16 md:py-24;
+  }
+  
+  /* Aesthetic transitions */
+  .fade-in {
+    @apply opacity-0 transform transition-all duration-700 ease-out;
+    animation: fadeIn 0.8s forwards;
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  /* Buttons */
+  .velo-btn {
+    @apply inline-flex items-center justify-center px-6 py-3 text-sm tracking-wider uppercase transition-all duration-300 border;
+  }
+  
+  .velo-btn-primary {
+    @apply bg-[color:var(--color-accent)] text-white border-[color:var(--color-accent)] hover:bg-transparent hover:text-[color:var(--color-accent)];
+  }
+  
+  .velo-btn-secondary {
+    @apply bg-transparent text-[color:var(--color-dark)] border-[color:var(--color-secondary)] hover:bg-[color:var(--color-secondary)] hover:text-[color:var(--color-dark)];
+  }
+  
+  /* Cards */
+  .velo-card {
+    @apply relative overflow-hidden bg-white border border-[color:var(--color-primary)] p-6 transition-all duration-300;
+  }
+  
+  .velo-card:hover {
+    @apply shadow-md border-[color:var(--color-secondary)];
+  }
+  
+  /* Product cards */
+  .velo-product {
+    @apply relative overflow-hidden bg-white;
+  }
+  
+  .velo-product-img {
+    @apply w-full object-cover transition-all duration-500;
+    aspect-ratio: 1 / 1;
+  }
+  
+  .velo-product:hover .velo-product-img {
+    @apply scale-105;
+  }
+  
+  .velo-product-overlay {
+    @apply absolute bottom-0 left-0 right-0 p-4 bg-white/90 transform translate-y-full transition-all duration-300 flex justify-between items-center;
+  }
+  
+  .velo-product:hover .velo-product-overlay {
+    @apply translate-y-0;
+  }
+  
+  /* Form elements */
+  .velo-input {
+    @apply w-full border-b border-[color:var(--color-secondary)] bg-transparent px-2 py-3 focus:outline-none focus:border-[color:var(--color-accent)] transition-colors duration-300;
+  }
+  
+  .velo-label {
+    @apply block text-sm uppercase tracking-wider text-[color:var(--color-light-text)] mb-2;
+  }
+  
+  /* Aesthetic dividers */
+  .velo-divider {
+    @apply h-px w-20 bg-[color:var(--color-secondary)] my-8 mx-auto;
+  }
+  
+  .velo-divider-sm {
+    @apply h-px w-10 bg-[color:var(--color-secondary)] my-4;
+  }
+
+  /* Navigation */
+  .velo-nav-link {
+    @apply relative inline-block text-sm uppercase tracking-wider px-4 py-2 text-[color:var(--color-dark)] transition-colors duration-300 after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-0 after:h-0.5 after:bg-[color:var(--color-accent)] after:transition-all after:duration-300;
+  }
+  
+  .velo-nav-link:hover, .velo-nav-link.active {
+    @apply text-[color:var(--color-accent)] after:w-1/2;
+  }
+  
+  .velo-mobile-menu {
+    @apply fixed inset-0 bg-[color:var(--color-bg)] flex flex-col items-center justify-center transform transition-all duration-500 z-50;
+  }
+  
+  .velo-menu-item {
+    @apply text-lg uppercase tracking-wider py-3 text-[color:var(--color-dark)] transition-colors duration-300;
+  }
+  
+  /* Header & Footer */
+  .velo-header {
+    @apply static w-full z-50 transition-all duration-300 border-b border-transparent bg-[color:var(--color-secondary)];
+  }
+  
+  .velo-header.scrolled {
+    @apply bg-white/95 backdrop-blur-sm border-[color:var(--color-primary)];
+  }
+  
+  .velo-footer {
+    @apply bg-[color:var(--color-primary)] border-t border-[color:var(--color-secondary)];
+  }
+  
+  /* Badge and counters */
+  .velo-badge {
+    @apply inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs bg-[color:var(--color-accent)] text-white absolute -top-2 -right-2;
+  }
+  
+  /* Custom icons */
+  .velo-icon {
+    @apply w-5 h-5 text-[color:var(--color-accent)];
+  }
+  
+  .velo-icon-circle {
+    @apply flex items-center justify-center w-12 h-12 bg-[color:var(--color-primary)] text-[color:var(--color-accent)];
+  }
+  
+  /* Banner and promotional elements */
+  .velo-promo-bar {
+    @apply py-2 bg-[color:var(--color-secondary)] text-[color:var(--color-dark)] text-center text-sm tracking-wider;
+  }
+  
+  /* Featured sections */
+  .velo-featured {
+    @apply relative overflow-hidden;
+  }
+  
+  .velo-featured-content {
+    @apply absolute inset-0 flex flex-col justify-center items-start p-8 md:p-12 lg:p-16 bg-gradient-to-r from-[color:var(--color-dark)]/70 to-transparent;
+  }
+  
+  .velo-featured-title {
+    @apply text-3xl md:text-4xl lg:text-5xl text-white font-light tracking-tight mb-4;
+  }
+  
+  /* Collection showcase */
+  .velo-collection {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px;
+  }
+  
+  .velo-collection-item {
+    @apply relative overflow-hidden bg-[color:var(--color-primary)];
+    aspect-ratio: 1 / 1;
+  }
+  
+  .velo-collection-item img {
+    @apply w-full h-full object-cover transition-all duration-700 ease-out;
+  }
+  
+  .velo-collection-item:hover img {
+    @apply scale-105 opacity-90;
+  }
+  
+  .velo-collection-title {
+    @apply absolute bottom-0 left-0 right-0 p-4 md:p-6 bg-white/80 text-center uppercase tracking-wider text-[color:var(--color-dark)] transform translate-y-full transition-transform duration-300;
+  }
+  
+  .velo-collection-item:hover .velo-collection-title {
+    @apply translate-y-0;
+  }
+  
+  /* Home hero section */
+  .velo-hero {
+    @apply min-h-screen flex items-center justify-center relative overflow-hidden py-24;
+  }
+  
+  .velo-hero-bg {
+    @apply absolute inset-0 -z-10;
+  }
+  
+  .velo-hero-bg img {
+    @apply w-full h-full object-cover opacity-80;
+  }
+  
+  .velo-hero-content {
+    @apply text-center max-w-3xl px-6;
+  }
+  
+  .velo-hero-title {
+    @apply text-4xl md:text-6xl lg:text-7xl font-light tracking-tight text-[color:var(--color-dark)] mb-6;
+  }
+  
+  .velo-hero-subtitle {
+    @apply text-xl md:text-2xl font-light tracking-normal text-[color:var(--color-light-text)] mb-10;
+  }
+  
+  /* Testimonials */
+  .velo-testimonial {
+    @apply p-8 bg-white border border-[color:var(--color-primary)];
+  }
+  
+  .velo-testimonial-text {
+    @apply text-lg italic text-[color:var(--color-light-text)] mb-6;
+  }
+  
+  .velo-testimonial-author {
+    @apply flex items-center;
+  }
+  
+  .velo-testimonial-avatar {
+    @apply w-10 h-10 bg-[color:var(--color-secondary)] mr-3;
+  }
+  
+  /* Custom animations */
+  .hover-lift {
+    @apply transition-transform duration-300 ease-out;
+  }
+  
+  .hover-lift:hover {
+    @apply -translate-y-1;
+  }
+
+}

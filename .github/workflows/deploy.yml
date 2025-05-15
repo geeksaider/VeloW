@@ -1,127 +1,102 @@
-name: Deploy to Timeweb Server
+name: "Build and Deploy Velo"
 
 on:
+  workflow_dispatch:
   push:
-    branches: [ main ]
-
-env:
-  DOCKERHUB_IMAGE_PREFIX: ${{ secrets.DOCKERHUB_USERNAME }}/velo
-  SSH_OPTS: -o StrictHostKeyChecking=no -o ConnectTimeout=10
+    branches: ["main"]
 
 jobs:
-  deploy:
-    name: Deploy
+  build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+      
+    steps: 
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+      
+    - name: Build and push Backend
+      uses: docker/build-push-action@v4
+      with:
+        context: ./backend
+        push: true
+        tags: ghcr.io/${{ github.repository }}/velo-backend:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
     
+    - name: Build and push Frontend
+      uses: docker/build-push-action@v4
+      with:
+        context: ./frontend
+        push: true
+        tags: ghcr.io/${{ github.repository }}/velo-frontend:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
-      
-      - name: Setup environment
-        run: |
-          echo "DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}" >> $GITHUB_ENV
-          echo "SSH_HOST=${{ secrets.SSH_HOST }}" >> $GITHUB_ENV
-          echo "SSH_USER=${{ secrets.SSH_USER }}" >> $GITHUB_ENV
-      
-      - name: Debug info
-        run: |
-          echo "Docker Hub user: ${{ secrets.DOCKERHUB_USERNAME }}"
-          echo "Target server: ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}"
-          echo "Current directory: $(pwd)"
-          ls -la
-      
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-      
-      - name: Login to Docker Hub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      
-      - name: Build and push backend
-        uses: docker/build-push-action@v4
-        with:
-          context: ./backend
-          push: true
-          tags: ${{ env.DOCKERHUB_IMAGE_PREFIX }}-backend:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-      
-      - name: Build and push frontend
-        uses: docker/build-push-action@v4
-        with:
-          context: ./frontend
-          push: true
-          tags: ${{ env.DOCKERHUB_IMAGE_PREFIX }}-frontend:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-      
+        uses: actions/checkout@v4
+        
       - name: Install SSH key
         uses: webfactory/ssh-agent@v0.7.0
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
       
-      - name: Test SSH connection
+      - name: Setup SSH known hosts
         run: |
-          echo "Testing SSH connection to ${{ secrets.SSH_HOST }}..."
-          ssh ${{ env.SSH_OPTS }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
-            "echo 'SSH connection successful!' || echo 'SSH connection failed'"
-      
-      - name: Prepare server directories
-        run: |
-          ssh ${{ env.SSH_OPTS }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
-            "mkdir -p /opt/velo/{caddy,config,db_backups}"
-      
-      - name: Upload configuration files
-        run: |
-          # Upload docker-compose
-          scp ${{ env.SSH_OPTS }} \
-            docker-compose.prod.yml \
-            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/opt/velo/
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
           
-          # Upload Caddyfile if exists
-          if [ -f "caddy/Caddyfile" ]; then
-            scp ${{ env.SSH_OPTS }} \
-              caddy/Caddyfile \
-              ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/opt/velo/caddy/
-          fi
-      
+      - name: Create remote directory
+        run: ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "mkdir -p ~/velo/caddy"
+        
+      - name: Copy configuration files
+        run: |
+          scp docker-compose.prod.yml ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:~/velo/
+          scp caddy/Caddyfile ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:~/velo/caddy/
+          
+      - name: Login to GitHub Container Registry
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | \
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
+            "docker login ghcr.io -u ${{ github.actor }} --password-stdin"
+            
       - name: Deploy application
         run: |
-          ssh ${{ env.SSH_OPTS }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} /bin/bash << 'EOF'
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} /bin/bash << 'EOF'
             set -e
-            cd /opt/velo
-            
-            echo "Logging in to Docker Hub..."
-            echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+            cd ~/velo
             
             echo "Pulling latest images..."
-            docker-compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml pull
             
             echo "Starting services..."
-            docker-compose -f docker-compose.prod.yml up -d --force-recreate
+            docker compose -f docker-compose.prod.yml up -d --force-recreate
             
             echo "Cleaning up..."
             docker system prune -f
             
-            echo "Deployment completed successfully!"
+            echo "Deployment completed!"
           EOF
-      
+          
       - name: Verify deployment
         run: |
-          ssh ${{ env.SSH_OPTS }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
-            "cd /opt/velo && \
-             docker-compose -f docker-compose.prod.yml ps && \
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
+            "cd ~/velo && \
+             docker compose -f docker-compose.prod.yml ps && \
              echo 'Containers are running:' && \
              docker ps --format '{{.Names}}: {{.Status}}'"
-
-      - name: Notify on failure
-        if: failure()
-        uses: rtCamp/action-slack-notify@v2
-        env:
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
-          SLACK_TITLE: "Deployment Failed"
-          SLACK_MESSAGE: "Deployment of $GITHUB_REPOSITORY failed on ${{ github.ref }}"
-          SLACK_COLOR: "danger"

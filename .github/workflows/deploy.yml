@@ -55,6 +55,10 @@ jobs:
         uses: webfactory/ssh-agent@v0.7.0
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Debug SSH_HOST
+        run: echo "Host is:${{ secrets.SSH_HOST }}"
+
       
       - name: Setup SSH known hosts
         run: |

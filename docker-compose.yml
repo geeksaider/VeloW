@@ -1,8 +1,13 @@
+version: '3.8'
+
 services:
   frontend:
     build:
       context: ./frontend
+      dockerfile: Dockerfile.prod
     restart: unless-stopped
+    environment:
+      - NODE_ENV=production
     depends_on:
       - backend
     volumes:
@@ -12,16 +17,15 @@ services:
   backend:
     build:
       context: ./backend
+      dockerfile: Dockerfile.prod
     restart: unless-stopped
-    depends_on:
-      - db
     environment:
       - NODE_ENV=production
       - DB_HOST=db
       - DB_USER=velo
-      - DB_PASSWORD=velopassword
+      - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=velo
-      - JWT_SECRET=velo_super_secret_key_change_in_production
+      - JWT_SECRET=${JWT_SECRET}
       - PORT=3000
     volumes:
       - ./backend:/app
@@ -30,14 +34,13 @@ services:
   db:
     image: mysql:8.0
     restart: unless-stopped
-    # Добавляем проброс порта 3306 наружу
     ports:
       - "3306:3306"
     environment:
-      - MYSQL_ROOT_PASSWORD=rootpassword
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
       - MYSQL_DATABASE=velo
       - MYSQL_USER=velo
-      - MYSQL_PASSWORD=velopassword
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
     volumes:
       - mysql_data:/var/lib/mysql
       - ./database/init:/docker-entrypoint-initdb.d
@@ -49,6 +52,18 @@ services:
       - "80:80"
       - "443:443"
     volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile
+      - ./caddy/ssl:/etc/caddy/ssl
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  mysql_data:
+    driver: local
+  caddy_data:
+    driver: local
+  caddy_config:
+    driver: local
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile
       - caddy_data:/data
       - caddy_config:/config

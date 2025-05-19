@@ -1,4 +1,4 @@
-localhost {
+velo.nikitabond.ru {
     # Фронтенд Vue.js
     handle_path /* {
         reverse_proxy frontend:8080
@@ -15,12 +15,24 @@ localhost {
         reverse_proxy frontend:8080
     }
 
-    # Для отладки и мониторинга
+    # Оптимизация производительности
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "camera=(), microphone=()"
+    }
+
+    # Логирование
     log {
         output file /var/log/caddy/access.log
         format console
     }
 
     # Автоматически получать HTTPS сертификаты
-    tls internal
+    tls {
+        protocols tls1.3
+    }
 }

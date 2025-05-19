@@ -6,6 +6,8 @@ services:
     image: velo-frontend
     networks:
       - app-network
+    volumes:
+      - frontend-dist:/app/dist
 
   backend:
     build: ./backend
@@ -40,6 +42,7 @@ services:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile
       - caddy-data:/data
       - caddy-config:/config
+      - frontend-dist:/app/dist
     networks:
       - app-network
     depends_on:

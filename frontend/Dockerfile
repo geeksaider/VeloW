@@ -1,13 +1,11 @@
-# Stage 1: Build
-FROM node:18-alpine as builder
+# Stage 1: Build Vue.js app
+FROM node:18-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 COPY . .
 RUN npm run build
 
-# Stage 2: Prepare assets
-FROM alpine:3.19
-WORKDIR /app
-RUN mkdir -p /app/dist
-COPY --from=builder /app/dist ./dist
+# Stage 2: Serve with Caddy
+FROM caddy:2.7-alpine
+COPY --from=builder /app/dist /app/dist

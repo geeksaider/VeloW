@@ -3,10 +3,10 @@ version: '3.8'
 services:
   frontend:
     build: ./frontend
+    volumes:
+      - frontend-dist:/app/dist
     networks:
       - app-network
-    depends_on:
-      - backend
 
   backend:
     build: ./backend
@@ -38,6 +38,7 @@ services:
       - "443:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
+      - frontend-dist:/app
       - caddy-data:/data
       - caddy-config:/config
     networks:
@@ -48,6 +49,7 @@ services:
 
 volumes:
   mysql-data:
+  frontend-dist:
   caddy-data:
   caddy-config:
 

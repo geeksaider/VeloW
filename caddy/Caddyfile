@@ -2,7 +2,7 @@ velo.nikitabond.ru {
     encode zstd gzip
     
     # Serve frontend
-    root * /app
+    root * /app/dist
     file_server
     
     # Proxy API requests

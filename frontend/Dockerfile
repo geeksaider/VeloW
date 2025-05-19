@@ -6,8 +6,8 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-# Stage 2: Serve
-FROM nginx:1.25-alpine
-COPY --from=builder /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-EXPOSE 80
+# Stage 2: Prepare assets
+FROM alpine:3.19
+WORKDIR /app
+RUN mkdir -p /app/dist
+COPY --from=builder /app/dist ./dist

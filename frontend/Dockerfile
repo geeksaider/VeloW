@@ -9,10 +9,9 @@ COPY . .
 RUN npm run build
 
 # Финальный этап
-FROM nginx:alpine
-COPY --from=builder /app/dist /usr/share/nginx/html
-RUN rm -rf /etc/nginx/conf.d/default.conf
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+FROM node:18-alpine
+WORKDIR /app
+COPY --from=builder /app/dist ./
 
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+EXPOSE 8080
+CMD ["npx", "http-server", "."]

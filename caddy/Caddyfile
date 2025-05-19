@@ -1,28 +1,24 @@
 velo.nikitabond.ru {
-    # Проксирование всех запросов фронтенду (http-server в контейнере)
-    handle_path /* {
-        reverse_proxy velow-frontend-1:8080
+
+    # Фронтенд Vue.js на / (все пути кроме /api и /admin)
+    route {
+        @api path /api/*
+        @admin path /admin/*
+
+        reverse_proxy @api backend:3000
+        reverse_proxy @admin velo-frontend-1:8080
+
+        # Для остальных запросов фронтенд
+        reverse_proxy velo-frontend-1:8080
     }
 
-    # API бекенда
-    handle_path /api/* {
-        uri strip_prefix /api
-        reverse_proxy velow-backend-1:3000 {
-            header_up Host {host}
-            header_up X-Real-IP {remote}
-        }
-    }
-
-    # Админская панель, если она статика — можешь тоже проксировать или отдавать как есть
-    handle_path /admin/* {
-        reverse_proxy velow-frontend-1:8080
-    }
-
+    # Логирование
     log {
         output file /var/log/caddy/access.log
         format console
     }
 
+    # TLS
     tls {
         issuer acme {
             email geeksaider@gmail.com
@@ -30,16 +26,24 @@ velo.nikitabond.ru {
         on_demand
     }
 
+    # Безопасные заголовки
     header {
         X-XSS-Protection "1; mode=block"
         X-Content-Type-Options "nosniff"
         X-Frame-Options "DENY"
         Referrer-Policy "strict-origin-when-cross-origin"
     }
+    
+    # Кэширование
+    header {
+        @api path /api/*
+        @static not path /api/*
 
-    @api path /api/*
-    @static not path /api/*
-
-    header @api Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate"
-    header @static Cache-Control "public, max-age=31536000, immutable"
+        @api {
+            header Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate"
+        }
+        @static {
+            header Cache-Control "public, max-age=31536000, immutable"
+        }
+    }
 }

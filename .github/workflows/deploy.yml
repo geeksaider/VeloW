@@ -1,0 +1,107 @@
+name: "Build and Deploy Velo"
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      
+    steps: 
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+      
+    - name: Build and push Backend
+      uses: docker/build-push-action@v4
+      with:
+        context: ./backend
+        push: true
+        tags: ghcr.io/${{ github.repository }}/velo-backend:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+    
+    - name: Build and push Frontend
+      uses: docker/build-push-action@v4
+      with:
+        context: ./frontend
+        push: true
+        tags: ghcr.io/${{ github.repository }}/velo-frontend:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Install SSH key
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Debug SSH_HOST
+        run: echo "Host is:${{ secrets.SSH_HOST }}"
+
+      
+      - name: Setup SSH known hosts
+        run: |
+            mkdir -p $HOME/.ssh
+            ssh-keyscan -H ${{ secrets.SSH_HOST }} >> $HOME/.ssh/known_hosts
+
+          
+      - name: Create remote directory
+        run: ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "mkdir -p ~/velo/caddy"
+        
+      - name: Copy configuration files
+        run: |
+          scp docker-compose.prod.yml ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:~/velo/
+          scp caddy/Caddyfile ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:~/velo/caddy/
+          
+      - name: Login to GitHub Container Registry
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | \
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
+            "docker login ghcr.io -u ${{ github.actor }} --password-stdin"
+            
+      - name: Deploy application
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} /bin/bash << 'EOF'
+            set -e
+            cd ~/velo
+            
+            echo "Pulling latest images..."
+            docker compose -f docker-compose.prod.yml pull
+            
+            echo "Starting services..."
+            docker compose -f docker-compose.prod.yml up -d --force-recreate
+            
+            echo "Cleaning up..."
+            docker system prune -f
+            
+            echo "Deployment completed!"
+          EOF
+          
+      - name: Verify deployment
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
+            "cd ~/velo && \
+             docker compose -f docker-compose.prod.yml ps && \
+             echo 'Containers are running:' && \
+             docker ps --format '{{.Names}}: {{.Status}}'"

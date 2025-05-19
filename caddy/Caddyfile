@@ -1,49 +1,28 @@
 velo.nikitabond.ru {
-
-    # Фронтенд Vue.js на / (все пути кроме /api и /admin)
-    route {
-        @api path /api/*
-        @admin path /admin/*
-
-        reverse_proxy @api backend:3000
-        reverse_proxy @admin velo-frontend-1:8080
-
-        # Для остальных запросов фронтенд
-        reverse_proxy velo-frontend-1:8080
+    encode zstd gzip
+    
+    # Serve frontend
+    root * /app
+    file_server
+    
+    # Proxy API requests
+    handle_path /api/* {
+        reverse_proxy backend:3000 {
+            header_up X-Real-IP {remote_host}
+        }
     }
-
-    # Логирование
-    log {
-        output file /var/log/caddy/access.log
-        format console
+    
+    # Security headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        Referrer-Policy strict-origin-when-cross-origin
     }
-
-    # TLS
+    
     tls {
         issuer acme {
             email geeksaider@gmail.com
-        }
-        on_demand
-    }
-
-    # Безопасные заголовки
-    header {
-        X-XSS-Protection "1; mode=block"
-        X-Content-Type-Options "nosniff"
-        X-Frame-Options "DENY"
-        Referrer-Policy "strict-origin-when-cross-origin"
-    }
-    
-    # Кэширование
-    header {
-        @api path /api/*
-        @static not path /api/*
-
-        @api {
-            header Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate"
-        }
-        @static {
-            header Cache-Control "public, max-age=31536000, immutable"
         }
     }
 }

@@ -1,72 +1,56 @@
+version: '3.8'
+
 services:
   frontend:
-    build:
-      context: ./frontend
-    restart: on-failure:3
+    build: ./frontend
+    networks:
+      - app-network
     depends_on:
       - backend
-    environment:
-      - NODE_ENV=production
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
-    ports:
-      - "8080:8080"
 
   backend:
-    build:
-      context: ./backend
-      target: production
-    restart: unless-stopped
-    depends_on:
-      - db
+    build: ./backend
     environment:
       - NODE_ENV=production
       - DB_HOST=db
-      - DB_USER=velo
-      - DB_PASSWORD=velopassword
+      - DB_USER=root
+      - DB_PASSWORD=secret
       - DB_NAME=velo
-      - JWT_SECRET=velo_super_secret_key_change_in_production
-      - PORT=3000
+    networks:
+      - app-network
+    depends_on:
+      - db
 
   db:
     image: mysql:8.0
-    restart: unless-stopped
     environment:
-      - MYSQL_ROOT_PASSWORD=rootpassword
-      - MYSQL_DATABASE=velo
-      - MYSQL_USER=velo
-      - MYSQL_PASSWORD=velopassword
+      MYSQL_ROOT_PASSWORD: secret
+      MYSQL_DATABASE: velo
     volumes:
-      - mysql_data:/var/lib/mysql
-      - ./database/init:/docker-entrypoint-initdb.d
+      - mysql-data:/var/lib/mysql
+    networks:
+      - app-network
 
   caddy:
-    image: caddy:2
-    restart: unless-stopped
+    image: caddy:2.7-alpine
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - ./caddy/Caddyfile:/etc/caddy/Caddyfile
-      - caddy_data:/data
-      - caddy_config:/config
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - app-network
     depends_on:
       - frontend
       - backend
 
-networks:
-  default:
-    name: velo_network
-    driver: bridge
-
 volumes:
-  mysql_data:
-    driver: local
-  caddy_data:
-    driver: local
-  caddy_config:
-    driver: local
+  mysql-data:
+  caddy-data:
+  caddy-config:
+
+networks:
+  app-network:
+    driver: bridge

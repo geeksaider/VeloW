@@ -22,5 +22,8 @@ COPY --from=builder /app/dist ./
 # Открываем порт 8080
 EXPOSE 8080
 
-# Запускаем http-server и слушаем на всех интерфейсах (0.0.0.0)
-CMD ["npx", "http-server", ".", "-p", "8080", "-a", "0.0.0.0"]
+# Устанавливаем serve для правильного роутинга Vue.js
+RUN npm install -g serve
+
+# Запускаем serve с опциями для Vue.js
+CMD ["serve", ".", "-s", "-l", "8080"]

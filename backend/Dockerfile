@@ -6,8 +6,9 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install --production
 COPY . .
+RUN npm run build
 
-FROM node:18-alpine
+FROM node:18-alpine AS production
 
 WORKDIR /app
 

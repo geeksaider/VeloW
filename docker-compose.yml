@@ -1,13 +1,10 @@
-version: '3.8'
-
 services:
   frontend:
     build: ./frontend
-    image: velo-frontend
-    networks:
-      - app-network
     volumes:
       - frontend-dist:/app/dist
+    networks:
+      - app-network
 
   backend:
     build: ./backend
@@ -40,9 +37,9 @@ services:
       - "443:443"
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile
+      - frontend-dist:/app/dist
       - caddy-data:/data
       - caddy-config:/config
-      - frontend-dist:/app/dist
     networks:
       - app-network
     depends_on:
@@ -51,6 +48,7 @@ services:
 
 volumes:
   mysql-data:
+  frontend-dist:  # Добавлено объявление volume
   caddy-data:
   caddy-config:
 

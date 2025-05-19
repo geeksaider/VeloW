@@ -28,7 +28,7 @@ velo.nikitabond.ru {
 
     # Автоматическое получение SSL сертификатов
     tls {
-        email admin@velo.nikitabond.ru
+        email geeksaider@gmail.com
         on_demand
     }
 

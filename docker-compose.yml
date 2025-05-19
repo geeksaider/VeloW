@@ -4,38 +4,35 @@ services:
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile.prod
+      target: builder
     restart: unless-stopped
-    ports:
-      - "8080:8080"  # Внутренний порт фронтенда
+    depends_on:
+      - backend
+    environment:
+      - NODE_ENV=production
     volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      - ./frontend/dist:/usr/share/nginx/html
+      - ./frontend/nginx.conf:/etc/nginx/conf.d/default.conf
 
   backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile.prod
+      target: production
     restart: unless-stopped
+    depends_on:
+      - db
     environment:
       - NODE_ENV=production
       - DB_HOST=db
       - DB_USER=velo
       - DB_PASSWORD=velopassword
       - DB_NAME=velo
-      - JWT_SECRET=velo_super_secret_key
+      - JWT_SECRET=velo_super_secret_key_change_in_production
       - PORT=3000
-    ports:
-      - "3000:3000"  # Внутренний порт бэкенда
-    volumes:
-      - ./backend:/app
-      - /app/node_modules
 
   db:
     image: mysql:8.0
     restart: unless-stopped
-    ports:
-      - "3306:3306"  # Внутренний порт MySQL
     environment:
       - MYSQL_ROOT_PASSWORD=rootpassword
       - MYSQL_DATABASE=velo
@@ -49,26 +46,25 @@ services:
     image: caddy:2
     restart: unless-stopped
     ports:
-      - "80:80"      # Внешний HTTP
-      - "443:443"    # Внешний HTTPS
+      - "80:80"
+      - "443:443"
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile
-      - ./caddy/ssl:/etc/caddy/ssl
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
       - frontend
       - backend
 
-volumes:
-  mysql_data:
-    driver: local
-  caddy_data:
-    driver: local
-  caddy_config:
-    driver: local
+networks:
+  default:
+    name: velo_network
+    driver: bridge
 
 volumes:
   mysql_data:
+    driver: local
   caddy_data:
+    driver: local
   caddy_config:
+    driver: local

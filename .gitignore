@@ -1,23 +1,23 @@
-# Dependencies
+# Node.js
 node_modules/
-vendor/
+.pnp
+.pnp.js
+
+# Vue.js
+/dist
+/node_modules
+/.nuxt
 
 # Environment variables
 .env
 .env.local
 .env.*.local
 
-# Build output
-frontend/dist/
-backend/build/
-
-# Docker
-.docker/
-.dockerignore
-
 # Logs
 *.log
-logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # IDE
 .idea/
@@ -25,27 +25,44 @@ logs/
 *.swp
 *.swo
 
-# OS files
+# OS
 .DS_Store
 Thumbs.db
 
+# Build
+*.log
+
+# Docker
+.docker/
+docker-compose.override.yml
+
 # Database
-mysql_data/
+*.sql
+*.sql.gz
 
-# Temp files
-*.tmp
-*.temp
-*.bak
-*.backup
-
-# Test coverage
+# Test
 coverage/
 
-# Cache
-.cache/
-node_modules/.cache/
+# Misc
+.DS_Store
+Thumbs.db
+*.pem
 
-# Debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# Local env files
+.env*.local
+
+# Vite
+node_modules/.vite
+
+# Backend
+backend/dist
+backend/.env
+backend/.env.*
+backend/logs
+
+# Frontend
+frontend/dist
+frontend/.env
+frontend/.env.*
+frontend/node_modules
+frontend/.nuxt

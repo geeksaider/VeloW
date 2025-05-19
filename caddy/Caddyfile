@@ -1,29 +1,23 @@
 velo.nikitabond.ru {
     # Фронтенд Vue.js
     handle_path /* {
-        reverse_proxy frontend:8080
+        root * /usr/share/nginx/html
+        file_server
     }
 
     # API бекенда
     handle_path /api/* {
         uri strip_prefix /api
-        reverse_proxy backend:3000
+        reverse_proxy backend:3000 {
+            header_up Host {host}
+            header_up X-Real-IP {remote}
+        }
     }
 
     # Админская панель
     handle_path /admin/* {
-        reverse_proxy frontend:8080
-    }
-<<<<<<< HEAD
-
-    # Оптимизация производительности
-    header {
-        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
-        X-Content-Type-Options "nosniff"
-        X-Frame-Options "SAMEORIGIN"
-        X-XSS-Protection "1; mode=block"
-        Referrer-Policy "strict-origin-when-cross-origin"
-        Permissions-Policy "camera=(), microphone=()"
+        root * /usr/share/nginx/html
+        file_server
     }
 
     # Логирование
@@ -32,10 +26,27 @@ velo.nikitabond.ru {
         format console
     }
 
-    # Автоматически получать HTTPS сертификаты
+    # Автоматическое получение SSL сертификатов
     tls {
-        protocols tls1.3
+        email admin@velo.nikitabond.ru
+        on_demand
     }
-=======
->>>>>>> c94541a3ee971ef4a34775a990974e58b0f2e995
+
+    # Безопасность
+    security_headers {
+        xss_protection "1; mode=block"
+        content_type_nosniff
+        frame_options "DENY"
+        referrer_policy "strict-origin-when-cross-origin"
+    }
+
+    # Кэширование
+    header {
+        if {path} "^/api/" {
+            Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate"
+        }
+        else {
+            Cache-Control "public, max-age=31536000, immutable"
+        }
+    }
 }

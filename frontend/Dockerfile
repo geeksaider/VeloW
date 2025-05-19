@@ -1,13 +1,17 @@
-FROM node:16-alpine
+FROM node:18-alpine AS builder
 
 WORKDIR /app
 
+# Установка зависимостей и сборка
 COPY package*.json ./
-
 RUN npm install
-
 COPY . .
+RUN npm run build
 
-EXPOSE 8080
+# Финальный этап
+FROM nginx:alpine
+COPY --from=builder /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-CMD ["npm", "run", "serve"]
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]

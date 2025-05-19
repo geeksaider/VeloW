@@ -8,6 +8,8 @@ services:
     restart: unless-stopped
     depends_on:
       - backend
+    ports:
+      - "8080:8080"  # Внутренний порт фронтенда
     volumes:
       - ./frontend:/app
       - /app/node_modules
@@ -25,6 +27,8 @@ services:
       - DB_NAME=velo
       - JWT_SECRET=velo_super_secret_key
       - PORT=3000
+    ports:
+      - "3000:3000"  # Внутренний порт бэкенда
     volumes:
       - ./backend:/app
       - /app/node_modules
@@ -33,7 +37,7 @@ services:
     image: mysql:8.0
     restart: unless-stopped
     ports:
-      - "3306:3306"
+      - "3306:3306"  # Внутренний порт MySQL
     environment:
       - MYSQL_ROOT_PASSWORD=rootpassword
       - MYSQL_DATABASE=velo
@@ -47,8 +51,8 @@ services:
     image: caddy:2
     restart: unless-stopped
     ports:
-      - "80:80"
-      - "443:443"
+      - "80:80"      # Внешний HTTP
+      - "443:443"    # Внешний HTTPS
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile
       - ./caddy/ssl:/etc/caddy/ssl

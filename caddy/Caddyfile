@@ -28,9 +28,13 @@ velo.nikitabond.ru {
 
     # Автоматическое получение SSL сертификатов
     tls {
+    issuer acme {
         email geeksaider@gmail.com
-        on_demand
     }
+    on_demand
+}
+
+
 
     # Безопасность
     security_headers {

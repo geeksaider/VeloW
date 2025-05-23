@@ -1,18 +1,6 @@
 velo.nikitabond.ru {
     encode zstd gzip
     
-    # Serve frontend
-    root * /app/dist
-    try_files {path} /index.html
-    file_server
-    
-    # Proxy API requests
-    handle_path /api/* {
-        reverse_proxy backend:3000 {
-            header_up X-Real-IP {remote_host}
-        }
-    }
-    
     # Security headers
     header {
         Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
@@ -20,10 +8,16 @@ velo.nikitabond.ru {
         X-Frame-Options DENY
         Referrer-Policy strict-origin-when-cross-origin
     }
-    
-    tls {
-        issuer acme {
-            email geeksaider@gmail.com
+
+    # Proxy API requests
+    handle_path /api/* {
+        reverse_proxy backend:3000 {
+            header_up X-Real-IP {remote_host}
         }
     }
+
+    # Serve frontend
+    root * /app/dist
+    try_files {path} /index.html
+    file_server
 }

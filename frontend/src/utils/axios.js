@@ -2,7 +2,6 @@ import axios from 'axios';
 
 // Создаем экземпляр axios с настроенным baseURL
 const instance = axios.create({
-  // Используем относительный путь для API - это работает с Vue CLI proxy
   baseURL: '/api',
   withCredentials: true, // Важно для передачи httpOnly cookie
   timeout: 30000, // 30 секунд тайм-аут - увеличиваем для медленных соединений
